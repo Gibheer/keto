@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ory/keto/internal/expand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -48,6 +49,22 @@ func (c *clientGRPC) Check(subject, relation, namespace, object string, maxDepth
 		return false, fmt.Errorf("check request failed: %w", err)
 	}
 	return resp.Allowed, nil
+}
+
+func (c *clientGRPC) Expand(relation, namespace, object string, maxDepth int32) (*expand.Tree, error) {
+	cl := rts.NewExpandServiceClient(c.conn)
+	resp, err := cl.Expand(c.ctx, &rts.ExpandRequest{
+		Subject:  rts.NewSubjectSet(relation, namespace, object),
+		MaxDepth: maxDepth,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not request expand tree: %w", err)
+	}
+	tree, err := expand.TreeFromProto(resp.Tree)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert received expand tree to internal format: %w", err)
+	}
+	return tree, nil
 }
 
 func (c *clientGRPC) Close() {

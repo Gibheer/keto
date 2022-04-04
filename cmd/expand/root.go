@@ -3,15 +3,12 @@ package expand
 import (
 	"fmt"
 
-	rts "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
-
 	"github.com/ory/x/flagx"
 
 	"github.com/ory/x/cmdx"
 	"github.com/spf13/cobra"
 
 	"github.com/ory/keto/cmd/client"
-	"github.com/ory/keto/internal/expand"
 )
 
 const FlagMaxDepth = "max-depth"
@@ -23,9 +20,9 @@ func NewExpandCmd() *cobra.Command {
 		Long:  "Expand a subject set into a tree of subjects.",
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			conn, err := client.GetReadConn(cmd)
+			conn, err := client.FromCmd(cmd, client.ModeReadOnly, cmd.Context())
 			if err != nil {
-				return nil
+				return err
 			}
 			defer conn.Close()
 
@@ -33,21 +30,9 @@ func NewExpandCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			cl := rts.NewExpandServiceClient(conn)
-			resp, err := cl.Expand(cmd.Context(), &rts.ExpandRequest{
-				Subject:  rts.NewSubjectSet(args[1], args[2], args[0]),
-				MaxDepth: maxDepth,
-			})
+			tree, err := conn.Expand(args[0], args[1], args[2], maxDepth)
 			if err != nil {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Error making the request: %s\n", err.Error())
-				return cmdx.FailSilently(cmd)
-			}
-
-			tree, err := expand.TreeFromProto(resp.Tree)
-			if err != nil {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Error building the tree: %s\n", err.Error())
-				return cmdx.FailSilently(cmd)
+				return err
 			}
 
 			cmdx.PrintJSONAble(cmd, tree)

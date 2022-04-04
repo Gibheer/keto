@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	//"github.com/ory/keto/internal/expand"
+	"github.com/ory/keto/internal/expand"
 	//"github.com/ory/keto/internal/relationtuple"
 	//"github.com/ory/keto/internal/x"
 	"github.com/spf13/cobra"
@@ -35,8 +35,10 @@ const (
 
 type (
 	client interface {
-		// run check if the combination of subject, relation, namespace and object is allowed
+		// Check is requesting if the combination of subject, relation, namespace and object is allowed.
 		Check(subject, relation, namespace, object string, maxDepth int32) (bool, error)
+		// Expand takes the relation, namespace and object and returns all objects registered.
+		Expand(relation, namespace, object string, maxDepth int32) (*expand.Tree, error)
 		Close()
 	}
 
