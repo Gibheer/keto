@@ -3,8 +3,6 @@ package check
 import (
 	"fmt"
 
-	rts "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
-
 	"github.com/ory/keto/internal/check"
 
 	"github.com/ory/x/cmdx"
@@ -31,7 +29,7 @@ func newCheckCmd() *cobra.Command {
 		Long:  "Check whether a subject has a relation on an object. This method resolves subject sets and subject set rewrites.",
 		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			conn, err := client.GetReadConn(cmd)
+			conn, err := client.FromCmd(cmd, client.ModeReadOnly, cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -42,20 +40,13 @@ func newCheckCmd() *cobra.Command {
 				return err
 			}
 
-			cl := rts.NewCheckServiceClient(conn)
-			resp, err := cl.Check(cmd.Context(), &rts.CheckRequest{
-				Subject:   rts.NewSubjectID(args[0]),
-				Relation:  args[1],
-				Namespace: args[2],
-				Object:    args[3],
-				MaxDepth:  maxDepth,
-			})
+			result, err := conn.Check(args[0], args[1], args[2], args[3], maxDepth)
 			if err != nil {
 				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Could not make request: %s\n", err)
 				return err
 			}
 
-			cmdx.PrintJSONAble(cmd, &checkOutput{Allowed: resp.Allowed})
+			cmdx.PrintJSONAble(cmd, &checkOutput{Allowed: result})
 			return nil
 		},
 	}
